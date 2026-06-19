@@ -1,9 +1,11 @@
 import os
+import json
 from pathlib import Path
 from dotenv import load_dotenv
 import numpy as np
 import pandas as pd
 from google.cloud import bigquery
+from google.oauth2 import service_account
 import dash
 from dash import dcc, html
 import plotly.graph_objects as go
@@ -12,7 +14,26 @@ from plotly.subplots import make_subplots
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 PROJECT = os.environ["GCP_PROJECT"]
-client = bigquery.Client(project=PROJECT)
+
+
+def _make_client(project: str) -> bigquery.Client:
+    """
+    Build a BigQuery client.
+
+    In production (Render) the service-account key is provided as JSON *content*
+    in GOOGLE_CREDENTIALS_JSON — there is no key file on disk. Locally we fall
+    back to Application Default Credentials (e.g. GOOGLE_APPLICATION_CREDENTIALS
+    pointing at a key file).
+    """
+    creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    if creds_json:
+        info = json.loads(creds_json)
+        credentials = service_account.Credentials.from_service_account_info(info)
+        return bigquery.Client(project=project, credentials=credentials)
+    return bigquery.Client(project=project)
+
+
+client = _make_client(PROJECT)
 
 
 # ── data ─────────────────────────────────────────────────────────────────────

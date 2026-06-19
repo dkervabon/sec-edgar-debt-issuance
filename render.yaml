@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: corporate-debt-trends
+    runtime: python
+    plan: free
+    region: oregon
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --chdir dashboard --bind 0.0.0.0:$PORT app:server
+    envVars:
+      # Python runtime pinned to match local dev
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      # GCP project that owns the BigQuery datasets
+      - key: GCP_PROJECT
+        sync: false
+      # Full service-account key JSON *content* (not a file path).
+      # Paste the contents of the key file into this value in the Render dashboard.
+      - key: GOOGLE_CREDENTIALS_JSON
+        sync: false
