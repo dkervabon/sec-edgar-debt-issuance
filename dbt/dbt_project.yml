@@ -1,0 +1,22 @@
+name: corporate_debt
+version: "1.0.0"
+config-version: 2
+
+profile: corporate_debt
+
+model-paths:  ["models"]
+seed-paths:   ["seeds"]
+test-paths:   ["tests"]
+macro-paths:  ["macros"]
+
+target-path:  "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  corporate_debt:
+    staging:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: marts

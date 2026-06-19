@@ -1,0 +1,123 @@
+version: 2
+
+models:
+  - name: stg_edgar_filings
+    description: >
+      Deduplicated 8-K Item 2.03 filing metadata. One row per accession number,
+      keeping the most recently ingested version when the DAG re-ingests an
+      overlapping window.
+    columns:
+      - name: accession_no
+        description: "SEC accession number (primary key)"
+        tests:
+          - unique
+          - not_null
+      - name: cik
+        description: "Company CIK, leading zeros stripped"
+        tests:
+          - not_null
+      - name: file_date
+        description: "Date the 8-K was filed with the SEC"
+        tests:
+          - not_null
+      - name: period_of_report
+        description: "Event date (when the debt was incurred)"
+      - name: items
+        description: "Comma-separated 8-K items reported"
+      - name: primary_doc
+        description: "Filename used by document_parser to construct the document fetch URL"
+
+  - name: stg_debt_details
+    description: >
+      Parsed debt instrument fields from the 8-K HTML bodies, deduplicated on
+      accession_no. Rows where parse_success=false are retained — filter them
+      in mart models to work with reliably parsed instruments.
+    columns:
+      - name: accession_no
+        description: "FK to stg_edgar_filings.accession_no (primary key here)"
+        tests:
+          - unique
+          - not_null
+      - name: instrument_type
+        description: "Categorised debt instrument type"
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - term_loan
+                  - revolving_credit_facility
+                  - senior_secured_notes
+                  - senior_unsecured_notes
+                  - senior_notes
+                  - convertible_notes
+                  - subordinated_notes
+                  - secured_promissory_note
+                  - promissory_note
+                  - commercial_paper
+                  - mortgage
+                  - receivables_facility
+                  - securitization_facility
+                  - financing_agreement
+                  - credit_agreement
+                  - credit_facility
+                  - bridge_facility
+                  - debentures
+                  - senior_debentures
+                  - junior_subordinated
+                  - guaranteed_notes
+                  - other
+                quote: true
+              config:
+                where: "instrument_type is not null"
+      - name: interest_rate_type
+        description: "fixed or floating"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ["fixed", "floating"]
+              config:
+                where: "interest_rate_type is not null"
+      - name: parse_success
+        description: "True when instrument_type or principal_amount_usd was extracted"
+        tests:
+          - not_null
+
+  - name: stg_fred_rates
+    description: >
+      Daily interest rate observations from FRED, deduplicated on
+      (series_id, observation_date). Rate values with null or '.' (FRED's
+      missing marker) are dropped at ingestion.
+    columns:
+      - name: series_id
+        description: "FRED series identifier"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["DFF", "DGS2", "DGS5", "DGS10", "BAMLC0A0CM"]
+      - name: observation_date
+        description: "Date of the rate observation"
+        tests:
+          - not_null
+      - name: rate_value
+        description: "Rate value (percent or bps depending on series)"
+        tests:
+          - not_null
+
+  - name: stg_sp500_sectors
+    description: >
+      S&P 500 sector mapping seeded from data/sp500_sectors.csv. Used to enrich
+      debt issuance records with GICS sector when the issuing company's ticker
+      can be matched against this table.
+    columns:
+      - name: ticker
+        description: "Exchange ticker symbol (primary key)"
+        tests:
+          - unique
+          - not_null
+      - name: gics_sector
+        description: "GICS sector (11 sectors)"
+        tests:
+          - not_null
+      - name: gics_sub_industry
+        description: "GICS sub-industry (finest granularity)"

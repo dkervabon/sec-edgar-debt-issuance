@@ -1,0 +1,80 @@
+version: 2
+
+models:
+  - name: mart_debt_issuance
+    description: >
+      Fact table joining every parsed 8-K Item 2.03 filing with its extracted
+      debt instrument fields and best-effort GICS sector enrichment.
+      Grain: one row per accession_no (one debt event).
+      Sector matching is a name-based LEFT JOIN against the 20-company S&P 500
+      seed; unmatched issuers get gics_sector = 'Other'.
+    columns:
+      - name: accession_no
+        description: "SEC accession number — primary key"
+        tests:
+          - unique
+          - not_null
+      - name: file_date
+        description: "Date the 8-K was filed"
+        tests:
+          - not_null
+      - name: issuance_quarter
+        description: "First day of the calendar quarter of file_date"
+        tests:
+          - not_null
+      - name: issuance_year
+        description: "Calendar year of file_date"
+        tests:
+          - not_null
+      - name: gics_sector
+        description: "GICS sector from stg_sp500_sectors, or 'Other' when unmatched"
+        tests:
+          - not_null
+      - name: parse_success
+        description: "True when instrument_type or principal was extracted from the filing"
+        tests:
+          - not_null
+
+  - name: mart_rate_correlation
+    description: >
+      Aggregated table at (issuance_quarter, gics_sector, instrument_type) grain.
+      Joins issuance activity counts and principal volumes from mart_debt_issuance
+      with quarterly-averaged FRED interest rates. Use this for time-series charts
+      comparing issuance activity against the rate environment.
+    columns:
+      - name: issuance_quarter
+        description: "Calendar quarter (first day)"
+        tests:
+          - not_null
+      - name: gics_sector
+        description: "GICS sector (or 'Other' for unmatched issuers)"
+        tests:
+          - not_null
+      - name: instrument_type
+        description: "Debt instrument type (null when parse_success=false)"
+      - name: deal_count
+        description: "Total 8-K filings in this quarter/sector/instrument bucket"
+        tests:
+          - not_null
+      - name: parsed_deal_count
+        description: "Filings with at least one extracted field (parse_success=true)"
+      - name: total_principal_usd
+        description: "Sum of principal_amount_usd for parsed deals"
+      - name: avg_principal_usd
+        description: "Average deal size for parsed deals"
+      - name: fixed_rate_deals
+        description: "Count of fixed-rate instruments in this bucket"
+      - name: floating_rate_deals
+        description: "Count of floating-rate instruments in this bucket"
+      - name: pct_floating
+        description: "Floating rate share (floating / (fixed + floating))"
+      - name: avg_fed_funds_rate
+        description: "Quarterly average of FRED DFF (Federal Funds Effective Rate)"
+      - name: avg_2yr_treasury
+        description: "Quarterly average of FRED DGS2 (2-Year Treasury)"
+      - name: avg_5yr_treasury
+        description: "Quarterly average of FRED DGS5 (5-Year Treasury)"
+      - name: avg_10yr_treasury
+        description: "Quarterly average of FRED DGS10 (10-Year Treasury)"
+      - name: avg_corp_oas_bps
+        description: "Quarterly average of FRED BAMLC0A0CM (IG Corporate OAS, bps)"

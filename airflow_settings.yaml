@@ -1,0 +1,19 @@
+# Local-development configuration only — not used in cloud deployments.
+# Run `astro dev start` to apply these automatically.
+
+airflow:
+  connections:
+    - conn_id: google_cloud_default
+      conn_type: google_cloud_platform
+      conn_extra:
+        project: sec-edgar-debt
+        key_path: /usr/local/airflow/include/keys/sec-edgar-debt-979e17b362f7.json
+
+  pools:
+    - pool_name:
+      pool_slot:
+      pool_description:
+
+  variables:
+    - variable_name: FRED_API_KEY
+      variable_value: "bde13d358637c6a618b3bcc59de7042e"

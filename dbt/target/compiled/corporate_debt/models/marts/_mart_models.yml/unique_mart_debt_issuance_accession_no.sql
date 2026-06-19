@@ -1,0 +1,21 @@
+
+    
+    
+
+with dbt_test__target as (
+
+  select accession_no as unique_field
+  from `sec-edgar-debt`.`marts`.`mart_debt_issuance`
+  where accession_no is not null
+
+)
+
+select
+    unique_field,
+    count(*) as n_records
+
+from dbt_test__target
+group by unique_field
+having count(*) > 1
+
+

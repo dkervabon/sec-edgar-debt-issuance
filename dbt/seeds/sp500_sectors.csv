@@ -1,0 +1,21 @@
+ticker,company_name,gics_sector,gics_sub_industry
+AAPL,Apple Inc.,Information Technology,Technology Hardware Storage & Peripherals
+MSFT,Microsoft Corporation,Information Technology,Systems Software
+AMZN,Amazon.com Inc.,Consumer Discretionary,Broadline Retail
+GOOGL,Alphabet Inc. Class A,Communication Services,Interactive Media & Services
+META,Meta Platforms Inc.,Communication Services,Interactive Media & Services
+TSLA,Tesla Inc.,Consumer Discretionary,Automobile Manufacturers
+BRK.B,Berkshire Hathaway Inc. Class B,Financials,Multi-Sector Holdings
+JPM,JPMorgan Chase & Co.,Financials,Diversified Banks
+JNJ,Johnson & Johnson,Health Care,Pharmaceuticals
+V,Visa Inc.,Financials,Transaction & Payment Processing Services
+XOM,Exxon Mobil Corporation,Energy,Integrated Oil & Gas
+UNH,UnitedHealth Group Incorporated,Health Care,Managed Health Care
+PG,Procter & Gamble Company,Consumer Staples,Personal Care Products
+MA,Mastercard Incorporated,Financials,Transaction & Payment Processing Services
+HD,Home Depot Inc.,Consumer Discretionary,Home Improvement Retail
+CVX,Chevron Corporation,Energy,Integrated Oil & Gas
+LLY,Eli Lilly and Company,Health Care,Pharmaceuticals
+ABBV,AbbVie Inc.,Health Care,Biotechnology
+MRK,Merck & Co. Inc.,Health Care,Pharmaceuticals
+PEP,PepsiCo Inc.,Consumer Staples,Soft Drinks & Non-alcoholic Beverages

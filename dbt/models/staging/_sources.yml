@@ -1,0 +1,107 @@
+version: 2
+
+sources:
+  - name: raw
+    database: sec-edgar-debt
+    schema: raw
+    description: "Raw tables landed by the Python EL pipeline (scripts/run_el.py / Airflow DAG debt_issuance_el)."
+
+    tables:
+      - name: edgar_8k_filings
+        description: >
+          8-K Item 2.03 filing metadata fetched from the SEC EDGAR full-text
+          search API (EFTS). One row per filing document. Contains duplicates
+          when the incremental DAG re-ingests an overlapping date window;
+          deduplication happens in stg_edgar_filings.
+        columns:
+          - name: accession_no
+            description: "SEC accession number — natural key (format: XXXXXXXXXX-YY-ZZZZZZ)"
+          - name: cik
+            description: "Company CIK, leading zeros stripped"
+          - name: entity_name
+            description: "Company name as reported on the filing"
+          - name: form_type
+            description: "Always 8-K for this source"
+          - name: file_date
+            description: "Date the 8-K was filed with the SEC"
+          - name: period_of_report
+            description: "Period of report (the event date, not the filing date)"
+          - name: items
+            description: "Comma-separated list of 8-K items reported (e.g. '1.01,2.03,9.01')"
+          - name: file_url
+            description: "URL of the filing index page on sec.gov"
+          - name: primary_doc
+            description: "Filename of the primary 8-K HTML document — used by document_parser"
+          - name: ingested_at
+            description: "UTC timestamp when this row was written by the EL pipeline"
+
+      - name: edgar_debt_details
+        description: >
+          Parsed debt instrument fields extracted from the primary 8-K HTML
+          document for each Item 2.03 filing. Joined to edgar_8k_filings on
+          accession_no. parse_success=false rows are retained for auditability;
+          filter them out in downstream models as needed.
+        columns:
+          - name: accession_no
+            description: "FK to edgar_8k_filings.accession_no"
+          - name: cik
+            description: "Company CIK"
+          - name: entity_name
+            description: "Company name"
+          - name: file_date
+            description: "Date the 8-K was filed"
+          - name: instrument_type
+            description: "Categorised debt instrument (e.g. term_loan, senior_notes, revolving_credit_facility)"
+          - name: principal_amount_usd
+            description: "Parsed principal in USD (float). Null when not extractable."
+          - name: principal_raw
+            description: "Raw matched text used to derive principal_amount_usd"
+          - name: interest_rate_type
+            description: "'fixed' or 'floating'"
+          - name: interest_rate_raw
+            description: "Raw matched rate text (e.g. '5.00%', 'SOFR +175 bps')"
+          - name: maturity_raw
+            description: "Raw matched maturity text"
+          - name: item_203_text
+            description: "First 10k characters of the extracted Item 2.03 document section"
+          - name: parse_success
+            description: "True when at least instrument_type or principal_amount_usd was extracted"
+          - name: parsed_at
+            description: "UTC timestamp when this row was written"
+
+      - name: fred_rate_observations
+        description: >
+          Daily interest rate observations from the FRED API (St. Louis Fed).
+          Series: DFF (fed funds), DGS2, DGS5, DGS10 (treasury yields),
+          BAMLC0A0CM (investment-grade corporate OAS). Missing values ('.')
+          are dropped at ingestion time.
+        columns:
+          - name: series_id
+            description: "FRED series identifier"
+          - name: observation_date
+            description: "Observation date"
+          - name: value
+            description: "Rate value (percent or basis points depending on series)"
+          - name: ingested_at
+            description: "UTC timestamp when this row was written"
+
+      - name: cik_sectors
+        description: >
+          CIK → SIC → GICS sector mapping fetched from the EDGAR submissions API
+          (data.sec.gov/submissions/CIK{cik}.json). One row per CIK. Refreshed
+          by scripts/load_cik_sectors.py (WRITE_TRUNCATE).
+        columns:
+          - name: cik
+            description: "Company CIK — joins to edgar_8k_filings.cik"
+          - name: entity_name
+            description: "Company name from EDGAR submissions"
+          - name: ticker
+            description: "Primary exchange ticker (first in the tickers array)"
+          - name: sic_code
+            description: "SEC Standard Industrial Classification code"
+          - name: sic_description
+            description: "Human-readable SIC description from EDGAR"
+          - name: gics_sector
+            description: "GICS sector derived from sic_code via sec_sectors.sic_to_gics()"
+          - name: fetched_at
+            description: "UTC timestamp when this row was fetched"
