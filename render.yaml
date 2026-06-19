@@ -14,7 +14,9 @@ services:
       # GCP project that owns the BigQuery datasets
       - key: GCP_PROJECT
         sync: false
-      # Full service-account key JSON *content* (not a file path).
-      # Paste the contents of the key file into this value in the Render dashboard.
+      # Service-account key as base64-encoded JSON (not a file path).
+      # Generate with:  base64 -i <keyfile>.json | tr -d '\n'
+      # then paste the output into this value in the Render dashboard.
+      # Raw (un-encoded) JSON is also accepted by the app.
       - key: GOOGLE_CREDENTIALS_JSON
         sync: false

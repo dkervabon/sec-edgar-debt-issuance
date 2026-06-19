@@ -1,5 +1,7 @@
 import os
 import json
+import base64
+import binascii
 from pathlib import Path
 from dotenv import load_dotenv
 import numpy as np
@@ -16,18 +18,39 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 PROJECT = os.environ["GCP_PROJECT"]
 
 
+_CREDS_ENV_VARS = ("GOOGLE_CREDENTIALS_JSON", "GCP_SERVICE_ACCOUNT_KEY")
+
+
+def _decode_creds(raw: str) -> dict:
+    """
+    Accept a service-account key as either base64-encoded JSON (how it's stored
+    on Render) or raw JSON, and return the parsed dict.
+    """
+    raw = raw.strip()
+    # Raw JSON is passed through as-is; anything else is treated as base64.
+    if not raw.startswith("{"):
+        try:
+            raw = base64.b64decode(raw).decode("utf-8")
+        except (binascii.Error, ValueError) as exc:
+            raise ValueError(
+                "Service-account key env var is neither valid JSON nor valid "
+                "base64-encoded JSON"
+            ) from exc
+    return json.loads(raw)
+
+
 def _make_client(project: str) -> bigquery.Client:
     """
     Build a BigQuery client.
 
-    In production (Render) the service-account key is provided as JSON *content*
-    in GOOGLE_CREDENTIALS_JSON — there is no key file on disk. Locally we fall
-    back to Application Default Credentials (e.g. GOOGLE_APPLICATION_CREDENTIALS
-    pointing at a key file).
+    In production (Render) the service-account key is provided as a base64-encoded
+    JSON string in an env var (GOOGLE_CREDENTIALS_JSON / GCP_SERVICE_ACCOUNT_KEY) —
+    there is no key file on disk. Locally we fall back to Application Default
+    Credentials (e.g. GOOGLE_APPLICATION_CREDENTIALS pointing at a key file).
     """
-    creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
-    if creds_json:
-        info = json.loads(creds_json)
+    raw = next((os.environ[v] for v in _CREDS_ENV_VARS if os.environ.get(v)), None)
+    if raw:
+        info = _decode_creds(raw)
         credentials = service_account.Credentials.from_service_account_info(info)
         return bigquery.Client(project=project, credentials=credentials)
     return bigquery.Client(project=project)
